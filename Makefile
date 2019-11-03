@@ -66,6 +66,6 @@ deployci:
 	@echo "--- deploy cognito stack to aws"
 	@aws cloudformation deploy \
 		--template-file sam/ci/template.yaml \
-		--capabilities CAPABILITY_NAMED_IAM \
+		--capabilities CAPABILITY_NAMED_IAM CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
 		--stack-name serverless-cognito-auth-ci
 .PHONY: deployci
