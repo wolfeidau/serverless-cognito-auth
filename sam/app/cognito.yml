@@ -31,6 +31,7 @@ Metadata:
     - Label:
         default: 'Pinpoint Parameters'
       Parameters:
+      - PinpointApp
       - PinPointExternalId
   'AWS::ServerlessRepo::Application':
     Name: serverless-cognito-auth
@@ -105,6 +106,10 @@ Parameters:
     Type: String
     Default: https://localhost:3000/logout
   
+  PinpointApp:
+    Description: The pinpoint application identifier to use for analytics.
+    Type: String
+
   PinPointExternalId:
     Description: The external id used by this Cognito pool when accessing pinpoint.
     Type: String
@@ -114,11 +119,6 @@ Conditions:
   HasSignUpEmail: !Not [!Equals [!Ref SignUpEmail, '']]
 
 Resources:
-
-  PinpointApp:
-    Type: AWS::Pinpoint::App
-    Properties: 
-      Name: !Sub ${AppName}_${Stage}_${Branch}
 
   SignUpSNSTopic:
     Type: AWS::SNS::Topic
@@ -183,7 +183,7 @@ Resources:
               - Effect: Allow
                 Action:
                 - mobiletargeting:*
-                Resource: !Sub "${PinpointApp.Arn}/*"
+                Resource: !Sub "arn::mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointApp}/*"
               - Effect: Allow
                 Action:
                 - mobileanalytics:PutItems
@@ -286,11 +286,11 @@ Resources:
         authenticated: !GetAtt CognitoAuthRole.Arn
         unauthenticated: !GetAtt CognitoUnauthRole.Arn
 
-  UserPoolDomain:
-    Type: AWS::Cognito::UserPoolDomain
-    Properties:
-      UserPoolId: !Ref CognitoUserPool
-      Domain: !Sub ${Domain}-${Stage}-${Branch}
+  # UserPoolDomain:
+  #   Type: AWS::Cognito::UserPoolDomain
+  #   Properties:
+  #     UserPoolId: !Ref CognitoUserPool
+  #     Domain: !Sub ${Domain}-${Stage}-${Branch}
 
   TriggersLambdaFunction:
     Type: AWS::Serverless::Function
@@ -324,9 +324,6 @@ Resources:
       SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}"
 
 Outputs:
-  PinpointApp:
-    Description: "Pinpoint application"
-    Value: !Ref PinpointApp
   CognitoUserPool:
     Description: "User pool ID"
     Value: !Ref CognitoUserPool
@@ -336,6 +333,3 @@ Outputs:
   CognitoUserSPAClientId:
     Description: "Client ID for the SPA client"
     Value: !Ref CognitoUserSPAClient
-  UserPoolDomain:
-    Description: "User Pool domain"
-    Value: !Ref UserPoolDomain
