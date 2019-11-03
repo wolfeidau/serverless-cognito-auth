@@ -3,7 +3,7 @@ BRANCH ?= master
 APPNAME ?= exitus
 DOMAIN ?= exitus
 WHITELIST_DOMAIN ?= wolfe.id.au
-S3BUCKET ?= versent-innovation-2019-lambda-${AWS_REGION}
+PACKAGE_BUCKET ?= versent-innovation-2019-lambda-${AWS_REGION}
 
 default: clean prepare test build archive package deploy
 .PHONY: default
@@ -48,10 +48,9 @@ archive:
 
 package:
 	@echo "--- package cognito stack to aws"
-	@aws s3 mb s3://$(S3BUCKET) || true
 	@aws cloudformation package \
 		--template-file sam/app/cognito.yml \
-		--s3-bucket $(S3BUCKET) \
+		--s3-bucket $(PACKAGE_BUCKET) \
 		--output-template-file dist/packaged-template.yaml
 .PHONY: package
 

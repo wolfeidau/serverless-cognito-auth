@@ -10,7 +10,7 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - make clean build-linux archive package deploy
+      - make clean build-linux archive package
   post_build:
     commands:
       - echo Build completed on `date`
