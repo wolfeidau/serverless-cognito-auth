@@ -17,3 +17,7 @@ phases:
 cache:
   paths:
     - '/go/pkg/mod/**/*'
+artifacts:
+  files:
+    - dist/packaged-template.yaml
+  discard-paths: yes

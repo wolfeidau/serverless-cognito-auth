@@ -52,13 +52,13 @@ package:
 	@aws cloudformation package \
 		--template-file sam/app/cognito.yml \
 		--s3-bucket $(S3BUCKET) \
-		--output-template-file dist/cognito.out.yml
+		--output-template-file dist/packaged-template.yaml
 .PHONY: package
 
 deploy:
 	@echo "--- deploy cognito stack to aws"
 	@aws cloudformation deploy \
-		--template-file dist/cognito.out.yml \
+		--template-file dist/packaged-template.yaml \
 		--capabilities CAPABILITY_NAMED_IAM \
 		--stack-name cognito-$(APPNAME)-$(STAGE)-$(BRANCH) \
 		--parameter-overrides AppName=$(APPNAME) Stage=$(STAGE) Branch=$(BRANCH) Domain=$(DOMAIN) WhitelistDomain=$(WHITELIST_DOMAIN)
