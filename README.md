@@ -17,8 +17,8 @@ This application incorporates a range of out of the box features:
 
 # Usage
 
-For usage see [example app.yaml](example/app.yaml)
+For usage see [example app.yaml](https://github.com/wolfeidau/serverless-cognito-auth/blob/master/example/app.yaml)
 
 # License
 
-This application is released under Apache 2.0 license and is copyright [Mark Wolfe](https://wolfe.id.au).
+This application is released under Apache 2.0 license and is copyright [Mark Wolfe](https://www.wolfe.id.au/).
