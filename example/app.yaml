@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  This template sets up authentication for a single page application using serverless-cognito-auth
+
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: 'Application Environment Parameters'
+      Parameters:
+      - AppName
+      - Stage
+      - Branch
+    - Label:
+        default: 'Cognito Parameters'
+      Parameters:
+      - Domain
+      - WhitelistDomain
+      - SignUpEmail
+      - InviteCode
+    - Label:
+        default: 'Cognito SPA Parameters'
+      Parameters:
+      - SPALogOutURL
+      - SPACallbackURL
+    - Label:
+        default: 'Honeycomb Monitoring Parameters'
+      Parameters:
+      - HoneycombAPIKey
+      - HoneycombDataset
+    - Label:
+        default: 'Pinpoint Parameters'
+      Parameters:
+      - PinpointApp
+      - PinPointExternalId
+
+Parameters:
+
+  AppName:
+    Description: Name of application, used in sign up emails and naming of aws resources.
+    Type: String
+    AllowedPattern: '^[a-zA-Z0-9]*$'
+
+  Stage:
+    Description: The stage where the application is running in, e.g., dev, prod.
+    Type: String
+    Default: dev
+    AllowedPattern: '^[a-z0-9]*$'
+
+  Branch:
+    Description: The branch this application was deployed using.
+    Type: String
+    Default: master
+    AllowedPattern: '^[a-z0-9]*$'
+
+  Domain:
+    Description: Name of application, used to build the oauth pages Cognito domain.
+    Type: String
+    AllowedPattern: '^[a-z0-9]*$'
+
+  WhitelistDomain:
+    Description: 'Optional: Accept Cognito sign ups from users with emails which are a part of this domain, and reject all others.'
+    Type: String
+    Default: ''
+
+  SignUpEmail:
+    Description: 'Optional: Email address that will receive sign up notifications.'
+    Type: String
+    Default: ''
+
+  InviteCode:
+    Description: 'Optional: Invite code which if set will be required to be supplied during sign up.'
+    Type: String
+    Default: ''
+
+  HoneycombAPIKey:
+    Description: 'Optional: API key used to upload trace information to honeycomb'
+    Type: String
+    NoEcho: "true"
+    Default: ''
+
+  HoneycombDataset:
+    Description: 'Optional: Name of the data set used to store trace information in honeycomb'
+    Type: String
+    Default: ''
+
+  SPACallbackURL:
+    Description: The redirect URL used in the OAuth2 client which redirects users back to the SPA.
+    Type: String
+    Default: https://localhost:3000/callback
+
+  SPALogOutURL:
+    Description: The logout URL used in the OAuth2 client which redirects users back after logging out of the SPA.
+    Type: String
+    Default: https://localhost:3000/logout
+
+  PinPointExternalId:
+    Description: The external id used by this Cognito pool when accessing pinpoint.
+    Type: String
+    Default: 8ec4f9ca-e343-46f2-8bf8-272d427f529d
+
+Resources:
+  ServerlessCognitoAuth:
+    Type: 'AWS::Serverless::Application'
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:us-west-2:170889777468:applications/serverless-cognito-auth
+        SemanticVersion: 1.0.0
+      Parameters:
+        AppName: !Ref AppName
+        Stage: !Ref Stage
+        Branch: !Ref Branch
+        WhitelistDomain: !Ref WhitelistDomain
+        SignUpEmail: !Ref SignUpEmail
+        InviteCode: !Ref InviteCode
+        HoneycombAPIKey: !Ref HoneycombAPIKey
+        HoneycombDataset: !Ref HoneycombDataset
+        SPACallbackURL: !Ref SPACallbackURL
+        SPALogOutURL: !Ref SPALogOutURL
+        PinpointApp: !Ref PinpointApp
+        PinPointExternalId: !Ref PinPointExternalId
+
+  PinpointApp:
+    Type: AWS::Pinpoint::App
+    Properties: 
+      Name: !Sub ${AppName}_${Stage}_${Branch}
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !GetAtt  ServerlessCognitoAuth.CognitoUserPoolId
+      Domain: !Sub ${Domain}-${Stage}-${Branch}
+
+Outputs:
+  UserPoolDomain:
+    Description: "User Pool domain"
+    Value: !Ref UserPoolDomain
+  PinpointAppId:
+    Description: "Pinpoint application"
+    Value: !Ref PinpointApp

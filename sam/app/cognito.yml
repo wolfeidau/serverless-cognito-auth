@@ -36,12 +36,12 @@ Metadata:
   'AWS::ServerlessRepo::Application':
     Name: serverless-cognito-auth
     Description: >-
-      This template creates Cognito user pool, pinpoint application and some baseline Lamba hooks. This application incorporates some best practices for monitoring, logging and analytics.
+      This template creates Cognito user pool, pinpoint analytics and optional features such as invite code, sign up notifications and email domain whitelisting. This application incorporates some best practices for monitoring, logging and analytics.
     Author: Mark Wolfe
     SpdxLicenseId: Apache-2.0
-    Labels: [github, cognito, sam, authentication]
+    Labels: [cognito, sam, authentication, serverless]
     HomePageUrl: https://github.com/wolfeidau/serverless-cognito-auth
-    SemanticVersion: 1.0.0
+    SemanticVersion: 1.0.1
     SourceCodeUrl: https://github.com/wolfeidau/serverless-cognito-auth/tree/1.0.0
     LicenseUrl: ../../LICENSE
     ReadmeUrl: ../../README.md
@@ -286,12 +286,6 @@ Resources:
         authenticated: !GetAtt CognitoAuthRole.Arn
         unauthenticated: !GetAtt CognitoUnauthRole.Arn
 
-  # UserPoolDomain:
-  #   Type: AWS::Cognito::UserPoolDomain
-  #   Properties:
-  #     UserPoolId: !Ref CognitoUserPool
-  #     Domain: !Sub ${Domain}-${Stage}-${Branch}
-
   TriggersLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -324,10 +318,10 @@ Resources:
       SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}"
 
 Outputs:
-  CognitoUserPool:
+  CognitoUserPoolId:
     Description: "User pool ID"
     Value: !Ref CognitoUserPool
-  CognitoIdentityPool:
+  CognitoIdentityPoolId:
     Description: "Identity pool ID"
     Value: !Ref CognitoIdentityPool
   CognitoUserSPAClientId:

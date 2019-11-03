@@ -15,6 +15,10 @@ This application incorporates a range of out of the box features:
 * Optional sign up notifications to an email address.
 * Analytics provided by [Amazon Pinpoint](https://aws.amazon.com/pinpoint/) see [Using Amazon Pinpoint Analytics with Amazon Cognito User Pools ](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-pinpoint-integration.html)
 
+# Usage
+
+For usage see [example app.yaml](example/app.yaml)
+
 # License
 
-This application is released under Apache 2.0 license and is copyright Mark Wolfe.
+This application is released under Apache 2.0 license and is copyright [Mark Wolfe](https://wolfe.id.au).
