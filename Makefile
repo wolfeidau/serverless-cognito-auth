@@ -3,7 +3,6 @@ BRANCH ?= master
 APPNAME ?= exitus
 DOMAIN ?= exitus
 WHITELIST_DOMAIN ?= wolfe.id.au
-PACKAGE_BUCKET ?= versent-innovation-2019-lambda-${AWS_REGION}
 
 default: clean prepare test build archive package deploy
 .PHONY: default

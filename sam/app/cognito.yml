@@ -42,8 +42,8 @@ Metadata:
     HomePageUrl: https://github.com/wolfeidau/serverless-cognito-auth
     SemanticVersion: 1.0.0
     SourceCodeUrl: https://github.com/wolfeidau/serverless-cognito-auth/tree/1.0.0
-    LicenseUrl: ../LICENSE
-    ReadmeUrl: ../README.md
+    LicenseUrl: ../../LICENSE
+    ReadmeUrl: ../../README.md
 
 Parameters:
 
