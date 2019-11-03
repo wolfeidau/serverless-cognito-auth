@@ -1,0 +1,341 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'authentication: Resources for hosting authentication using AWS Cognito, a @wolfeidau template'
+
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+    - Label:
+        default: 'Application Environment Parameters'
+      Parameters:
+      - AppName
+      - Stage
+      - Branch
+    - Label:
+        default: 'Cognito Parameters'
+      Parameters:
+      - Domain
+      - WhitelistDomain
+      - SignUpEmail
+      - InviteCode
+    - Label:
+        default: 'Cognito SPA Parameters'
+      Parameters:
+      - SPALogOutURL
+      - SPACallbackURL
+    - Label:
+        default: 'Honeycomb Monitoring Parameters'
+      Parameters:
+      - HoneycombAPIKey
+      - HoneycombDataset
+    - Label:
+        default: 'Pinpoint Parameters'
+      Parameters:
+      - PinPointExternalId
+  'AWS::ServerlessRepo::Application':
+    Name: serverless-cognito-auth
+    Description: >-
+      This template creates Cognito user pool, pinpoint application and some baseline Lamba hooks. This application incorporates some best practices for monitoring, logging and analytics.
+    Author: Mark Wolfe <mark@wolfe.id.au>
+    SpdxLicenseId: Apache-2.0
+    Labels: [github, cognito, sam, authentication]
+    HomePageUrl: https://github.com/wolfeidau/serverless-cognito-auth
+    SemanticVersion: 1.0.0
+    SourceCodeUrl: https://github.com/wolfeidau/serverless-cognito-auth/tree/1.0.0
+    LicenseUrl: ../LICENSE
+    ReadmeUrl: ../README.md
+
+Parameters:
+
+  AppName:
+    Description: Name of application, used in sign up emails and naming of aws resources.
+    Type: String
+    AllowedPattern: '^[a-zA-Z0-9]*$'
+
+  Stage:
+    Description: The stage where the application is running in, e.g., dev, prod.
+    Type: String
+    Default: dev
+    AllowedPattern: '^[a-z0-9]*$'
+
+  Branch:
+    Description: The branch this application was deployed using.
+    Type: String
+    Default: master
+    AllowedPattern: '^[a-z0-9]*$'
+
+  Domain:
+    Description: Name of application, used to build the oauth pages Cognito domain.
+    Type: String
+    AllowedPattern: '^[a-z0-9]*$'
+
+  WhitelistDomain:
+    Description: 'Optional: Accept Cognito sign ups from users with emails which are a part of this domain, and reject all others.'
+    Type: String
+    Default: ''
+
+  SignUpEmail:
+    Description: 'Optional: Email address that will receive sign up notifications.'
+    Type: String
+    Default: ''
+
+  InviteCode:
+    Description: 'Optional: Invite code which if set will be required to be supplied during sign up.'
+    Type: String
+    Default: ''
+
+  HoneycombAPIKey:
+    Description: 'Optional: API key used to upload trace information to honeycomb'
+    Type: String
+    NoEcho: "true"
+    Default: ''
+
+  HoneycombDataset:
+    Description: 'Optional: Name of the data set used to store trace information in honeycomb'
+    Type: String
+    Default: ''
+
+  SPACallbackURL:
+    Description: The redirect URL used in the OAuth2 client which redirects users back to the SPA.
+    Type: String
+    Default: https://localhost:3000/callback
+
+  SPALogOutURL:
+    Description: The logout URL used in the OAuth2 client which redirects users back after logging out of the SPA.
+    Type: String
+    Default: https://localhost:3000/logout
+  
+  PinPointExternalId:
+    Description: The external id used by this Cognito pool when accessing pinpoint.
+    Type: String
+    Default: 8ec4f9ca-e343-46f2-8bf8-272d427f529d
+
+Conditions:
+  HasSignUpEmail: !Not [!Equals [!Ref SignUpEmail, '']]
+
+Resources:
+
+  PinpointApp:
+    Type: AWS::Pinpoint::App
+    Properties: 
+      Name: !Sub ${AppName}_${Stage}_${Branch}
+
+  SignUpSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub Signups_${AppName}_${Stage}_${Branch}
+
+  EmailSubscription:
+    Condition: HasSignUpEmail
+    Type: 'AWS::SNS::Subscription'
+    Properties:
+      Endpoint: !Ref SignUpEmail
+      Protocol: email
+      TopicArn: !Ref SignUpSNSTopic
+
+  CognitoUserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: !Sub ${AppName}_${Stage}_${Branch}
+      LambdaConfig:
+        PreSignUp: !GetAtt TriggersLambdaFunction.Arn
+        PreAuthentication: !GetAtt TriggersLambdaFunction.Arn
+        PostConfirmation: !GetAtt TriggersLambdaFunction.Arn
+        PreTokenGeneration: !GetAtt TriggersLambdaFunction.Arn
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+        - Name: invite_code
+          AttributeDataType: String
+          Mutable: false
+          Required: false          
+      EmailVerificationSubject: !Sub "Welcome to ${AppName}"
+      EmailVerificationMessage: !Sub "${AppName} says: Your activation code is {####}"
+
+  CognitoUserSPAClientRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "cognito-idp.amazonaws.com"
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: CognitoUserSPAClientPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                - mobiletargeting:*
+                Resource: !Sub "${PinpointApp.Arn}/*"
+              - Effect: Allow
+                Action:
+                - mobileanalytics:PutItems
+                Resource: "*"
+
+  CognitoUserSPAClient:
+    Type: "AWS::Cognito::UserPoolClient"
+    Properties:
+        ClientName: !Sub ${AppName}UserSPAClient${Stage}${Branch}
+        GenerateSecret: False
+        RefreshTokenValidity: 30
+        UserPoolId: !Ref CognitoUserPool
+        SupportedIdentityProviders: 
+        - COGNITO
+        CallbackURLs:
+        - !Ref SPACallbackURL
+        LogoutURLs:
+        - !Ref SPALogOutURL
+        AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+        AllowedOAuthFlows:
+        - code
+        AllowedOAuthFlowsUserPoolClient: True
+        AnalyticsConfiguration:
+          ApplicationId: !Ref PinpointApp
+          ExternalId: !Ref PinPointExternalId
+          RoleArn: !GetAtt CognitoUserSPAClientRole.Arn
+          UserDataShared: True
+
+  CognitoIdentityPool:
+    Type: "AWS::Cognito::IdentityPool"
+    Properties:
+      IdentityPoolName: !Sub ${AppName}IdentityPool${Stage}
+      AllowUnauthenticatedIdentities: False
+      CognitoIdentityProviders:
+        - ClientId: !Ref CognitoUserSPAClient
+          ProviderName: !GetAtt CognitoUserPool.ProviderName
+
+  CognitoUnauthRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: [ 'sts:AssumeRoleWithWebIdentity' ]
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: unauthenticated
+      Policies:
+        - PolicyName: CognitoUnauthorizedPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                - mobileanalytics:PutEvents
+                - cognito-sync:*
+                Resource:
+                - "*"
+
+  CognitoAuthRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: [ 'sts:AssumeRoleWithWebIdentity' ]
+            Condition:
+              StringEquals:
+                cognito-identity.amazonaws.com:aud: !Ref CognitoIdentityPool
+              ForAnyValue:StringLike:
+                cognito-identity.amazonaws.com:amr: authenticated
+      Policies:
+        - PolicyName: CognitoAuthorizedPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                - mobileanalytics:PutEvents
+                - cognito-sync:*
+                Resource:
+                - "*"
+
+  IdentityPoolRoleAttachment:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref CognitoIdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthRole.Arn
+        unauthenticated: !GetAtt CognitoUnauthRole.Arn
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      Domain: !Sub ${Domain}-${Stage}-${Branch}
+
+  TriggersLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: '../dist/handler.zip'
+      Handler: triggers
+      Runtime: go1.x
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource:
+                - !Ref SignUpSNSTopic
+      Timeout: 5
+      Environment:
+        Variables:
+          WHITELIST_DOMAIN: !Ref WhitelistDomain
+          HONEYCOMB_API_KEY: !Ref HoneycombAPIKey
+          HONEYCOMB_DATASET: !Ref HoneycombDataset
+          SIGNUP_SNS_TOPIC: !Ref SignUpSNSTopic
+          SIGNUP_INVITE_CODE: !Ref InviteCode
+
+  TriggersLambdaPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref TriggersLambdaFunction
+      Principal: "cognito-idp.amazonaws.com"
+      SourceArn: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPool}"
+
+Outputs:
+  PinpointApp:
+    Description: "Pinpoint application"
+    Value: !Ref PinpointApp
+  CognitoUserPool:
+    Description: "User pool ID"
+    Value: !Ref CognitoUserPool
+  CognitoIdentityPool:
+    Description: "Identity pool ID"
+    Value: !Ref CognitoIdentityPool
+  CognitoUserSPAClientId:
+    Description: "Client ID for the SPA client"
+    Value: !Ref CognitoUserSPAClient
+  UserPoolDomain:
+    Description: "User Pool domain"
+    Value: !Ref UserPoolDomain
