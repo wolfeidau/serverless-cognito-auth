@@ -295,7 +295,7 @@ Resources:
   TriggersLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: '../dist/handler.zip'
+      CodeUri: '../../dist/handler.zip'
       Handler: triggers
       Runtime: go1.x
       Policies:
