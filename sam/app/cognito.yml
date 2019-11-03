@@ -36,7 +36,7 @@ Metadata:
     Name: serverless-cognito-auth
     Description: >-
       This template creates Cognito user pool, pinpoint application and some baseline Lamba hooks. This application incorporates some best practices for monitoring, logging and analytics.
-    Author: Mark Wolfe <mark@wolfe.id.au>
+    Author: Mark Wolfe
     SpdxLicenseId: Apache-2.0
     Labels: [github, cognito, sam, authentication]
     HomePageUrl: https://github.com/wolfeidau/serverless-cognito-auth
