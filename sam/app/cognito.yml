@@ -41,7 +41,7 @@ Metadata:
     SpdxLicenseId: Apache-2.0
     Labels: [cognito, sam, authentication, serverless]
     HomePageUrl: https://github.com/wolfeidau/serverless-cognito-auth
-    SemanticVersion: 1.0.2
+    SemanticVersion: 1.0.3
     SourceCodeUrl: https://github.com/wolfeidau/serverless-cognito-auth/tree/1.0.0
     LicenseUrl: ../../LICENSE
     ReadmeUrl: ../../README.md
@@ -63,11 +63,6 @@ Parameters:
     Description: The branch this application was deployed using.
     Type: String
     Default: master
-    AllowedPattern: '^[a-z0-9]*$'
-
-  Domain:
-    Description: Name of application, used to build the oauth pages Cognito domain.
-    Type: String
     AllowedPattern: '^[a-z0-9]*$'
 
   WhitelistDomain:
@@ -186,7 +181,7 @@ Resources:
               - Effect: Allow
                 Action:
                 - mobiletargeting:*
-                Resource: !Sub "arn::mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointApp}/*"
+                Resource: !Sub "arn:aws:mobiletargeting:${AWS::Region}:${AWS::AccountId}:apps/${PinpointApp}/*"
               - Effect: Allow
                 Action:
                 - mobileanalytics:PutItems
@@ -303,6 +298,7 @@ Resources:
                 - sns:Publish
               Resource:
                 - !Ref SignUpSNSTopic
+                - !Ref EventsSNSTopic
       Timeout: 5
       Environment:
         Variables:
