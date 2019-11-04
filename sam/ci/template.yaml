@@ -11,6 +11,10 @@ Parameters:
     Type: String
     Description: The GitHub owner of the repository.
     Default: wolfeidau
+  BuildSpecFilePath:
+    Type: String
+    Description: CodeBuild build spec file name for build stage.
+    Default: "buildspec-pipeline.yaml"
 Resources:
   CD:
     Type: 'AWS::Serverless::Application'
@@ -22,4 +26,5 @@ Resources:
         GitHubOAuthToken: !Sub '{{resolve:secretsmanager:${GitHubOAuthTokenSecretId}}}'
         GitHubOwner: !Ref GitHubOwner
         GitHubRepo: serverless-cognito-auth
+        BuildSpecFilePath: !Ref BuildSpecFilePath
         PublishToSAR: "true"

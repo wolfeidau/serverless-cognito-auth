@@ -8,11 +8,11 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"github.com/wolfeidau/serverless-cognito-auth/pkg/eventstream"
 )
 
 var (
@@ -39,6 +39,13 @@ type CognitoPoolEventEnvelope struct {
 
 // CognitoTriggers handles all the cognito triggers supported in this service
 type CognitoTriggers struct {
+	publisher *eventstream.Publisher
+}
+
+func NewCognitoTriggers(cfgs ...*aws.Config) *CognitoTriggers {
+	return &CognitoTriggers{
+		publisher: eventstream.NewPublisher(cfgs...),
+	}
 }
 
 // PreSignUp pre sign up used to implement checks prior before signup
@@ -103,21 +110,19 @@ func (ct *CognitoTriggers) PostConfirmationSignUp(ctx context.Context, evt *Cogn
 		return nil, ErrMissingEmail
 	}
 
-	sess := session.Must(session.NewSession())
-
-	svc := sns.New(sess)
-
-	res, err := svc.Publish(&sns.PublishInput{
-		TopicArn: aws.String(os.Getenv("SIGNUP_SNS_TOPIC")),
-		Subject:  aws.String("new signup"),
-		Message:  aws.String(fmt.Sprintf("signup of user %s", email)),
-	})
+	err := ct.publisher.SendNotification(ctx, os.Getenv("SIGNUP_SNS_TOPIC"), "new signup", fmt.Sprintf("signup of user %s", email))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to publish PostConfirmationSignUp message")
 		return nil, err
 	}
 
-	log.Info().Str("MessageId", aws.StringValue(res.MessageId)).Msg("PostConfirmationSignUp message published")
+	lc, _ := lambdacontext.FromContext(ctx)
+
+	err = ct.publisher.SendEvent(ctx, os.Getenv("EVENTS_SNS_TOPIC"), fmt.Sprintf("cognito.%s.%s", evt.UserPoolID, evt.TriggerSource), lc.AwsRequestID, request.UserAttributes)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to publish PostConfirmationSignUp event")
+		return nil, err
+	}
 
 	return &events.CognitoEventUserPoolsPostConfirmationResponse{}, nil
 }

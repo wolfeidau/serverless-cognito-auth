@@ -10,6 +10,7 @@ AWS Cognito has got to the point where providing a simple template with a couple
 
 This application incorporates a range of out of the box features:
 
+* SNS Topic which publishes all sign ups, and sign in events, this can be used to maintain a session table or analytics.
 * Optional invitation code which is required to sign up.
 * Optional Email domain whitelisting to restrict sign up.
 * Optional sign up notifications to an email address.

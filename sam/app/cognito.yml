@@ -120,10 +120,13 @@ Conditions:
 
 Resources:
 
+  EventsSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties: {}
+
   SignUpSNSTopic:
     Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub Signups_${AppName}_${Stage}_${Branch}
+    Properties: {}
 
   EmailSubscription:
     Condition: HasSignUpEmail
@@ -307,6 +310,7 @@ Resources:
           HONEYCOMB_API_KEY: !Ref HoneycombAPIKey
           HONEYCOMB_DATASET: !Ref HoneycombDataset
           SIGNUP_SNS_TOPIC: !Ref SignUpSNSTopic
+          EVENTS_SNS_TOPIC: !Ref EventsSNSTopic
           SIGNUP_INVITE_CODE: !Ref InviteCode
 
   TriggersLambdaPermission:
@@ -327,3 +331,6 @@ Outputs:
   CognitoUserSPAClientId:
     Description: "Client ID for the SPA client"
     Value: !Ref CognitoUserSPAClient
+  EventTopicArn:
+    Description: "Event Topic ARN"
+    Value: !Ref EventsSNSTopic

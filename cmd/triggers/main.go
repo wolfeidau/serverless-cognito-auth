@@ -20,7 +20,7 @@ func main() {
 	}
 
 	mon := hooks.NewDefaultServerHooks()
-	ct := new(triggers.CognitoTriggers)
+	ct := triggers.NewCognitoTriggers()
 	dispatcher := triggers.NewDispatcher(ct, mon)
 
 	lambda.Start(dispatcher.Handler)
